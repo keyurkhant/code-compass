@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock
+from contextlib import asynccontextmanager
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,12 +25,15 @@ def mock_answerer():
 def client(mock_answerer):
     from codecompass.api.app import create_app
 
-    app = create_app()
-    # Override the lifespan by injecting state directly
-    app.state.answerer = mock_answerer
-    # Use TestClient without lifespan to avoid loading real models
+    @asynccontextmanager
+    async def _stub_lifespan(app):
+        app.state.answerer = mock_answerer
+        yield
+
+    with patch("codecompass.api.app.lifespan", _stub_lifespan):
+        app = create_app()
+
     with TestClient(app, raise_server_exceptions=True) as c:
-        c.app.state.answerer = mock_answerer
         yield c
 
 

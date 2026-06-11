@@ -7,6 +7,7 @@ Config:
     codecompass config set llm.model mistral-7b
     codecompass config set llm.api_key none   # required by openai SDK but not validated
 """
+
 import logging
 
 import httpx
@@ -29,7 +30,9 @@ class OpenAICompatProvider(LLMProvider):
         self._api_key = api_key
         self._timeout = timeout
 
-    def complete(self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None) -> str:
+    def complete(
+        self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None
+    ) -> str:
         all_messages = []
         if system:
             all_messages.append({"role": "system", "content": system})

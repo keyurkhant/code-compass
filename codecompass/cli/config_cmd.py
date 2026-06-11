@@ -1,4 +1,5 @@
 """codecompass config — read and write settings in ~/.config/codecompass/config.toml"""
+
 import click
 from rich.console import Console
 from rich.table import Table

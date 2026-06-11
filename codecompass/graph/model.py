@@ -4,6 +4,7 @@ Replaces the previous NetworkX in-memory graph with a persistent SQLite store.
 Supports: typed edges with confidence, BFS/DFS via recursive CTEs, FTS5 keyword search,
 incremental re-indexing by file SHA-256 hash.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -107,9 +108,7 @@ class GraphDB:
             )
         ]
         for nid in node_ids:
-            self._conn.execute(
-                "DELETE FROM edges WHERE source_id = ? OR target_id = ?", (nid, nid)
-            )
+            self._conn.execute("DELETE FROM edges WHERE source_id = ? OR target_id = ?", (nid, nid))
             self._conn.execute("DELETE FROM nodes_fts WHERE id = ?", (nid,))
         self._conn.execute("DELETE FROM nodes WHERE repo = ? AND path = ?", (repo, path))
         self._conn.commit()

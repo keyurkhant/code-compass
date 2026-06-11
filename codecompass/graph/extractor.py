@@ -8,6 +8,7 @@ Extracts:
 
 Incremental: skips files whose SHA-256 hash hasn't changed.
 """
+
 from __future__ import annotations
 
 import ast
@@ -55,9 +56,7 @@ def extract_python_symbols(
                     file_hash=file_hash,
                 )
             )
-            edges.append(
-                GraphEdge(source_id=file_node_id, target_id=sym_id, edge_type="defines")
-            )
+            edges.append(GraphEdge(source_id=file_node_id, target_id=sym_id, edge_type="defines"))
 
         elif isinstance(node, ast.ClassDef):
             cls_id = make_node_id(repo, path, node.name)
@@ -74,9 +73,7 @@ def extract_python_symbols(
                     file_hash=file_hash,
                 )
             )
-            edges.append(
-                GraphEdge(source_id=file_node_id, target_id=cls_id, edge_type="defines")
-            )
+            edges.append(GraphEdge(source_id=file_node_id, target_id=cls_id, edge_type="defines"))
 
             # Methods inside class
             for item in ast.iter_child_nodes(node):

@@ -3,6 +3,7 @@
 Calls Ollama's OpenAI-compatible endpoint at localhost:11434/v1/chat/completions.
 Install Ollama: https://ollama.ai  then: ollama pull llama3.2
 """
+
 import logging
 
 import httpx
@@ -23,7 +24,9 @@ class OllamaProvider(LLMProvider):
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
 
-    def complete(self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None) -> str:
+    def complete(
+        self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None
+    ) -> str:
         all_messages = []
         if system:
             all_messages.append({"role": "system", "content": system})

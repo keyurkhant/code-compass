@@ -3,6 +3,7 @@
 Reads/writes ~/.config/codecompass/config.toml.
 Environment variables override file values.
 """
+
 from __future__ import annotations
 
 import os
@@ -29,6 +30,7 @@ _config_cache: Config | None = None
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _read_toml(path: Path) -> dict[str, Any]:
     """Read a TOML file and return its contents as a dict."""
@@ -127,6 +129,7 @@ def _apply_env_overrides(config: Config) -> Config:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def load_config(config_path: Path | None = None) -> Config:
     """Load config from TOML file, then apply env-var overrides.

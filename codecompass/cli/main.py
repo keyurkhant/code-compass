@@ -176,8 +176,12 @@ cli.add_command(config_group)
 
 @cli.command("ingest")
 @click.argument("repo_path_or_url")
-@click.option("--name", "repo_name", default=None, help="Override the repo name / collection prefix.")
-@click.option("--force/--no-force", default=False, help="Delete and rebuild the existing collection.")
+@click.option(
+    "--name", "repo_name", default=None, help="Override the repo name / collection prefix."
+)
+@click.option(
+    "--force/--no-force", default=False, help="Delete and rebuild the existing collection."
+)
 def ingest_cmd(repo_path_or_url: str, repo_name: str | None, force: bool) -> None:
     """Ingest a local repo or remote git URL into the vector index.
 
@@ -197,7 +201,9 @@ def ingest_cmd(repo_path_or_url: str, repo_name: str | None, force: bool) -> Non
 
 @cli.command("ask")
 @click.argument("question")
-@click.option("--repo", "repo_path_or_url", default=None, help="Auto-ingest this repo first if not indexed.")
+@click.option(
+    "--repo", "repo_path_or_url", default=None, help="Auto-ingest this repo first if not indexed."
+)
 @click.option("--repo-name", default=None, help="Repo name / collection to query.")
 @click.option("--top-k", default=None, type=int, help="Chunks to retrieve (overrides config).")
 @click.option("--filter-lang", default=None, help="Restrict to a language (python, go, ...).")
@@ -456,9 +462,7 @@ def serve_cmd(host: str, port: int, reload: bool) -> None:
         codecompass serve --port 8080
         codecompass serve --reload   # dev mode
     """
-    console.print(
-        f"[bold green]Starting server[/bold green] on [cyan]http://{host}:{port}[/cyan]"
-    )
+    console.print(f"[bold green]Starting server[/bold green] on [cyan]http://{host}:{port}[/cyan]")
     cmd = [
         sys.executable,
         "-m",
@@ -540,7 +544,9 @@ def graph_show(repo_name: str) -> None:
 
     symbols = [n for n in nodes if n.node_type in ("function", "class")][:20]
     if symbols:
-        sym_table = Table(title="Top symbols (first 20)", show_header=True, header_style="bold blue")
+        sym_table = Table(
+            title="Top symbols (first 20)", show_header=True, header_style="bold blue"
+        )
         sym_table.add_column("Symbol", style="cyan")
         sym_table.add_column("Type", style="green")
         sym_table.add_column("File", style="dim")

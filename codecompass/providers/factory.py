@@ -3,6 +3,7 @@
 Imports are done lazily inside functions to avoid pulling in heavy dependencies
 at module import time.
 """
+
 from __future__ import annotations
 
 import os
@@ -23,16 +24,19 @@ def get_llm_provider(config: Config) -> LLMProvider:
 
     if provider == "claude-code":
         from codecompass.providers.llm_subprocess import ClaudeCodeProvider
+
         return ClaudeCodeProvider(model=config.llm.model, timeout=config.llm.timeout)
 
     elif provider == "subprocess":
         from codecompass.providers.llm_subprocess import SubprocessProvider
+
         if not config.llm.cmd_template:
             raise ValueError("llm.cmd_template must be set when llm.provider=subprocess")
         return SubprocessProvider(cmd_template=config.llm.cmd_template, timeout=config.llm.timeout)
 
     elif provider == "ollama":
         from codecompass.providers.llm_ollama import OllamaProvider
+
         return OllamaProvider(
             model=config.llm.model or "llama3.2",
             base_url=config.llm.base_url or "http://localhost:11434",
@@ -41,6 +45,7 @@ def get_llm_provider(config: Config) -> LLMProvider:
 
     elif provider == "openai-compat":
         from codecompass.providers.llm_openai_compat import OpenAICompatProvider
+
         return OpenAICompatProvider(
             model=config.llm.model or "gpt-4o",
             base_url=config.llm.base_url,
@@ -50,6 +55,7 @@ def get_llm_provider(config: Config) -> LLMProvider:
 
     elif provider == "litellm":
         from codecompass.providers.llm_litellm import LiteLLMProvider
+
         return LiteLLMProvider(model=config.llm.model or "claude-sonnet-4-5")
 
     else:
@@ -61,6 +67,7 @@ def get_llm_provider(config: Config) -> LLMProvider:
 def get_embedding_provider(config: Config) -> EmbeddingProvider:
     """Return the configured embedding provider."""
     from codecompass.providers.embedding_fastembed import FastEmbedProvider
+
     return FastEmbedProvider(model_name=config.embedding.model)
 
 

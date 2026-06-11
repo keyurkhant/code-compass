@@ -6,11 +6,11 @@ from pathlib import Path
 class LLMConfig:
     provider: str = "auto"
     # provider values: auto | claude-code | ollama | openai-compat | litellm | subprocess
-    model: str = ""            # e.g. llama3.2, claude-sonnet-4-5, gpt-4o
-    base_url: str = ""         # for ollama / openai-compat endpoints
-    api_key: str = ""          # for litellm only (optional)
-    cmd_template: str = ""     # for subprocess: e.g. "claude --bare -p {prompt} --output-format json"
-    timeout: int = 120         # seconds
+    model: str = ""  # e.g. llama3.2, claude-sonnet-4-5, gpt-4o
+    base_url: str = ""  # for ollama / openai-compat endpoints
+    api_key: str = ""  # for litellm only (optional)
+    cmd_template: str = ""  # for subprocess: e.g. "claude --bare -p {prompt} --output-format json"
+    timeout: int = 120  # seconds
 
 
 @dataclass

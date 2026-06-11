@@ -50,6 +50,7 @@ def _get_config():
     global _config
     if _config is None:
         from codecompass.config.manager import load_config
+
         _config = load_config()
     return _config
 
@@ -79,7 +80,9 @@ def _get_answerer():
         if bm25_path.exists():
             bm25.load(bm25_path)
         else:
-            logger.warning("BM25 index not found at %s; falling back to dense-only retrieval.", bm25_path)
+            logger.warning(
+                "BM25 index not found at %s; falling back to dense-only retrieval.", bm25_path
+            )
 
         # Answerer expects a Settings (pydantic) object for top_k_retrieve / token_budget.
         # We build a minimal shim from the Config dataclass so we don't hard-wire values.
@@ -164,10 +167,7 @@ def _format_search_results(results) -> str:
         snippet_lines = [ln for ln in (r.document or "").splitlines() if ln.strip()][:5]
         snippet = "\n    ".join(snippet_lines) if snippet_lines else "(no content)"
 
-        lines.append(
-            f"[{rank}] {path}:{start_line}-{end_line} (score: {score:.4f})\n"
-            f"    {snippet}"
-        )
+        lines.append(f"[{rank}] {path}:{start_line}-{end_line} (score: {score:.4f})\n    {snippet}")
     return "\n\n".join(lines)
 
 
@@ -315,11 +315,7 @@ def explain_symbol(
         graph_note = ""
         graph = _get_graph()
         if graph is not None:
-            matching = [
-                nid
-                for nid in graph._g.nodes
-                if symbol_name.lower() in nid.lower()
-            ]
+            matching = [nid for nid in graph._g.nodes if symbol_name.lower() in nid.lower()]
             if matching:
                 node_ids_str = "\n".join(f"  - {nid}" for nid in matching[:10])
                 graph_note = f"\nGraph nodes matching '{symbol_name}':\n{node_ids_str}\n"
@@ -528,9 +524,7 @@ def list_repos() -> str:
 
         lines = [f"Indexed repositories ({len(repo_stats)} total):"]
         for repo_name, stats in sorted(repo_stats.items()):
-            lines.append(
-                f"  {repo_name}  —  {stats['nodes']} nodes, {stats['edges']} edges"
-            )
+            lines.append(f"  {repo_name}  —  {stats['nodes']} nodes, {stats['edges']} edges")
 
         return "\n".join(lines)
     except Exception as exc:
@@ -631,13 +625,15 @@ def _find_node(graph, file_path: str, repo: str) -> str | None:
     for nid, data in graph._g.nodes(data=True):
         node_path = data.get("path", "")
         node_repo = data.get("repo", "")
-        if (node_path == file_path or node_path.endswith(f"/{file_path}")) and (not repo or node_repo == repo):
+        if (node_path == file_path or node_path.endswith(f"/{file_path}")) and (
+            not repo or node_repo == repo
+        ):
             return nid
 
     # Last resort: substring match on node ID
     for nid in graph._g.nodes:
         if file_path in nid and (not repo or nid.startswith(f"{repo}:")):
-                return nid
+            return nid
 
     return None
 

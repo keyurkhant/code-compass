@@ -8,6 +8,7 @@ SubprocessProvider: generic template. User sets llm.cmd_template in config.
   Example: "claude --bare -p {prompt} --output-format json"
            "ollama run llama3 {prompt}"
 """
+
 import json
 import logging
 import shlex
@@ -42,7 +43,9 @@ class ClaudeCodeProvider(LLMProvider):
         self._model = model
         self._timeout = timeout
 
-    def complete(self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None) -> str:
+    def complete(
+        self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None
+    ) -> str:
         prompt = _messages_to_prompt(messages, system)
         cmd = list(CLAUDE_CMD) + ["-p", prompt]
         if self._model:
@@ -63,7 +66,9 @@ class ClaudeCodeProvider(LLMProvider):
             raise RuntimeError(f"claude CLI timed out after {self._timeout}s") from e
 
         if result.returncode != 0:
-            raise RuntimeError(f"claude CLI error (exit {result.returncode}): {result.stderr[:500]}")
+            raise RuntimeError(
+                f"claude CLI error (exit {result.returncode}): {result.stderr[:500]}"
+            )
 
         # Claude CLI with --output-format json returns {"result": "...", "type": "result", ...}
         try:
@@ -86,7 +91,9 @@ class SubprocessProvider(LLMProvider):
         self._cmd_template = cmd_template
         self._timeout = timeout
 
-    def complete(self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None) -> str:
+    def complete(
+        self, messages: list[dict], *, max_tokens: int = 2048, system: str | None = None
+    ) -> str:
         prompt = _messages_to_prompt(messages, system)
         cmd_str = self._cmd_template.replace("{prompt}", shlex.quote(prompt))
         cmd = shlex.split(cmd_str)
@@ -94,12 +101,16 @@ class SubprocessProvider(LLMProvider):
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self._timeout)
         except FileNotFoundError as e:
-            raise RuntimeError(f"Command not found: {cmd[0]}. Check llm.cmd_template in config.") from e
+            raise RuntimeError(
+                f"Command not found: {cmd[0]}. Check llm.cmd_template in config."
+            ) from e
         except subprocess.TimeoutExpired as e:
             raise RuntimeError(f"Subprocess timed out after {self._timeout}s") from e
 
         if result.returncode != 0:
-            raise RuntimeError(f"Subprocess error (exit {result.returncode}): {result.stderr[:500]}")
+            raise RuntimeError(
+                f"Subprocess error (exit {result.returncode}): {result.stderr[:500]}"
+            )
 
         output = result.stdout.strip()
         try:

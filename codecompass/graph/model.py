@@ -1,12 +1,13 @@
-from dataclasses import dataclass, field
-import networkx as nx
 import json
+from dataclasses import dataclass
 from pathlib import Path
+
+import networkx as nx
 
 
 @dataclass
 class GraphNode:
-    id: str          # "repo:path" or "repo:path:symbol"
+    id: str  # "repo:path" or "repo:path:symbol"
     repo: str
     path: str
     symbol: str | None = None

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from codecompass.api.schemas import HealthResponse
 
 router = APIRouter()

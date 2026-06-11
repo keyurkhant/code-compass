@@ -1,4 +1,5 @@
 """Utility functions for the tiny test repo."""
+
 import argparse
 
 
@@ -14,6 +15,4 @@ def validate_config(config) -> bool:
     """Validate that the config has sensible values."""
     if not config.host:
         return False
-    if not (1 <= config.port <= 65535):
-        return False
-    return True
+    return 1 <= config.port <= 65535

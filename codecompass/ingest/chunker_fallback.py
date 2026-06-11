@@ -1,6 +1,7 @@
 from pathlib import Path
-from codecompass.ingest.models import CodeChunk
+
 from codecompass.ingest.language import detect_language
+from codecompass.ingest.models import CodeChunk
 
 
 class FallbackChunker:
@@ -22,17 +23,19 @@ class FallbackChunker:
 
             context_prefix = f"# File: {path}"
             chunk_id = CodeChunk.make_id(repo, path, start + 1)
-            chunks.append(CodeChunk(
-                id=chunk_id,
-                repo=repo,
-                path=path,
-                language=language,
-                symbol_name=None,
-                start_line=start + 1,
-                end_line=end,
-                content=content,
-                context_prefix=context_prefix,
-            ))
+            chunks.append(
+                CodeChunk(
+                    id=chunk_id,
+                    repo=repo,
+                    path=path,
+                    language=language,
+                    symbol_name=None,
+                    start_line=start + 1,
+                    end_line=end,
+                    content=content,
+                    context_prefix=context_prefix,
+                )
+            )
 
             if end >= len(lines):
                 break

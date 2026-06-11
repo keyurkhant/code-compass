@@ -1,6 +1,8 @@
+from unittest.mock import MagicMock
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock
+
 from codecompass.generate.models import Answer, Citation
 
 
@@ -9,7 +11,9 @@ def mock_answerer():
     answerer = MagicMock()
     answerer.answer.return_value = Answer(
         text="The Session class is defined in `requests/sessions.py:100-200`.",
-        citations=[Citation(path="requests/sessions.py", start_line=100, end_line=200, chunk_id="abc123")],
+        citations=[
+            Citation(path="requests/sessions.py", start_line=100, end_line=200, chunk_id="abc123")
+        ],
         question="Where is Session defined?",
         retrieved_chunk_ids=["abc123"],
     )
@@ -19,6 +23,7 @@ def mock_answerer():
 @pytest.fixture
 def client(mock_answerer):
     from codecompass.api.app import create_app
+
     app = create_app()
     # Override the lifespan by injecting state directly
     app.state.answerer = mock_answerer

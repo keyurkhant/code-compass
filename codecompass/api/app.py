@@ -1,14 +1,16 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+
 from fastapi import FastAPI
+
+from codecompass.api.routers import ask, health
 from codecompass.config import get_settings
 from codecompass.generate.answerer import Answerer
 from codecompass.index.bm25_indexer import BM25Index
-from codecompass.providers.embedding_sentence_transformer import SentenceTransformerEmbeddingProvider
-from codecompass.providers.llm_anthropic import AnthropicLLMProvider
+from codecompass.providers.embedding_fastembed import FastEmbedProvider
+from codecompass.providers.llm_litellm import LiteLLMProvider
 from codecompass.providers.vector_store_chroma import ChromaVectorStore
-from codecompass.api.routers import ask, health
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +19,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    embedder = SentenceTransformerEmbeddingProvider(settings.embedding_model_name)
-    llm = AnthropicLLMProvider(model_name=settings.llm_model_name, api_key=settings.anthropic_api_key)
+    embedder = FastEmbedProvider(settings.embedding_model_name)
+    llm = LiteLLMProvider(settings.llm_model)
     store = ChromaVectorStore(
         persist_dir=settings.chroma_persist_dir,
         collection_name=f"{settings.chroma_collection_prefix}_default",
@@ -28,10 +30,12 @@ async def lifespan(app: FastAPI):
     bm25_path = Path(settings.bm25_index_path)
     if bm25_path.exists():
         bm25.load(bm25_path)
-        logger.info(f"Loaded BM25 index from {bm25_path}")
+        logger.info("Loaded BM25 index from %s", bm25_path)
 
-    app.state.answerer = Answerer(llm=llm, embedder=embedder, store=store, bm25=bm25, settings=settings)
-    logger.info("Answerer initialized")
+    app.state.answerer = Answerer(
+        llm=llm, embedder=embedder, store=store, bm25=bm25, settings=settings
+    )
+    logger.info("Answerer initialized (model=%s)", settings.llm_model)
     yield
 
 

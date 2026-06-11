@@ -1,11 +1,13 @@
-from pathlib import Path
-from codecompass.ingest.models import CodeChunk
-from codecompass.ingest.language import detect_language, TREESITTER_SUPPORTED
-from codecompass.ingest.chunker_treesitter import TreeSitterChunker
-from codecompass.ingest.chunker_fallback import FallbackChunker
 import logging
+from pathlib import Path
+
+from codecompass.ingest.chunker_fallback import FallbackChunker
+from codecompass.ingest.chunker_treesitter import TreeSitterChunker
+from codecompass.ingest.language import TREESITTER_SUPPORTED, detect_language
+from codecompass.ingest.models import CodeChunk
 
 logger = logging.getLogger(__name__)
+
 
 def chunk_file(path: Path, repo_root: Path, repo_name: str) -> list[CodeChunk]:
     """Read a file and return its chunks with metadata."""

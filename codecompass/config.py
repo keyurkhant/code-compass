@@ -10,14 +10,17 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # LLM
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
-    llm_provider: str = "anthropic"
-    llm_model_name: str = "claude-sonnet-4-5"
+    # LLM — LiteLLM model string; examples:
+    #   claude-sonnet-4-5       (Anthropic — needs ANTHROPIC_API_KEY)
+    #   gpt-4o                  (OpenAI   — needs OPENAI_API_KEY)
+    #   gemini/gemini-1.5-pro   (Google   — needs GEMINI_API_KEY)
+    #   ollama/llama3           (local Ollama — no key needed)
+    llm_model: str = "claude-sonnet-4-5"
 
-    # Embeddings
-    embedding_model_name: str = "microsoft/codebert-base"
+    # Embeddings — fastembed model name; code-optimised options:
+    #   jinaai/jina-embeddings-v2-base-code  (768-dim, best for code)
+    #   BAAI/bge-small-en-v1.5               (384-dim, fastest)
+    embedding_model_name: str = "jinaai/jina-embeddings-v2-base-code"
     embedding_batch_size: int = 32
 
     # Vector store

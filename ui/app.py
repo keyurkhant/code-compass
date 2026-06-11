@@ -1,5 +1,5 @@
-import streamlit as st
 import httpx
+import streamlit as st
 
 API_URL = "http://localhost:8000"
 
@@ -13,7 +13,9 @@ st.caption("Ask questions about your codebase — answers grounded in real code 
 
 with st.sidebar:
     st.header("Configuration")
-    api_url = st.text_input("API URL", value=API_URL, help="Base URL of the code-compass API server.")
+    api_url = st.text_input(
+        "API URL", value=API_URL, help="Base URL of the code-compass API server."
+    )
     st.divider()
 
     st.subheader("Filters")
@@ -79,65 +81,66 @@ if prompt := st.chat_input("Ask a question about the codebase..."):
         filters = {"$and": where_clauses}
 
     # Call the API
-    with st.chat_message("assistant"):
-        with st.spinner("Searching the codebase..."):
-            try:
-                response = httpx.post(
-                    f"{api_url.rstrip('/')}/ask",
-                    json={"question": prompt, "filters": filters},
-                    timeout=60.0,
-                )
-                response.raise_for_status()
-                data = response.json()
+    with st.chat_message("assistant"), st.spinner("Searching the codebase..."):
+        try:
+            response = httpx.post(
+                f"{api_url.rstrip('/')}/ask",
+                json={"question": prompt, "filters": filters},
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            data = response.json()
 
-                answer_text = data.get("answer", "No answer returned.")
-                citations = data.get("citations", [])
-                retrieved_count = data.get("retrieved_chunk_count", 0)
+            answer_text = data.get("answer", "No answer returned.")
+            citations = data.get("citations", [])
+            retrieved_count = data.get("retrieved_chunk_count", 0)
 
-                st.markdown(answer_text)
+            st.markdown(answer_text)
 
-                if citations:
-                    with st.expander(f"Citations ({len(citations)}) — retrieved {retrieved_count} chunks"):
-                        for citation in citations:
-                            path = citation.get("path", "unknown")
-                            start = citation.get("start_line", 0)
-                            end = citation.get("end_line", 0)
-                            chunk_id = citation.get("chunk_id", "")
-                            st.markdown(
-                                f"**`{path}`** — lines {start}–{end}"
-                                + (f" (chunk `{chunk_id}`)" if chunk_id else "")
-                            )
-                else:
-                    st.caption("No citations were extracted from this answer.")
+            if citations:
+                with st.expander(
+                    f"Citations ({len(citations)}) — retrieved {retrieved_count} chunks"
+                ):
+                    for citation in citations:
+                        path = citation.get("path", "unknown")
+                        start = citation.get("start_line", 0)
+                        end = citation.get("end_line", 0)
+                        chunk_id = citation.get("chunk_id", "")
+                        st.markdown(
+                            f"**`{path}`** — lines {start}–{end}"
+                            + (f" (chunk `{chunk_id}`)" if chunk_id else "")
+                        )
+            else:
+                st.caption("No citations were extracted from this answer.")
 
-                st.session_state.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": answer_text,
-                        "citations": citations,
-                    }
-                )
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": answer_text,
+                    "citations": citations,
+                }
+            )
 
-            except httpx.ConnectError:
-                error_msg = (
-                    f"Cannot connect to the API at **{api_url}**. "
-                    "Make sure the server is running (`codecompass serve`)."
-                )
-                st.error(error_msg)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg, "citations": []}
-                )
+        except httpx.ConnectError:
+            error_msg = (
+                f"Cannot connect to the API at **{api_url}**. "
+                "Make sure the server is running (`codecompass serve`)."
+            )
+            st.error(error_msg)
+            st.session_state.messages.append(
+                {"role": "assistant", "content": error_msg, "citations": []}
+            )
 
-            except httpx.HTTPStatusError as exc:
-                error_msg = f"API returned an error: `{exc.response.status_code}` — {exc.response.text}"
-                st.error(error_msg)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg, "citations": []}
-                )
+        except httpx.HTTPStatusError as exc:
+            error_msg = f"API returned an error: `{exc.response.status_code}` — {exc.response.text}"
+            st.error(error_msg)
+            st.session_state.messages.append(
+                {"role": "assistant", "content": error_msg, "citations": []}
+            )
 
-            except Exception as exc:
-                error_msg = f"Unexpected error: {exc}"
-                st.error(error_msg)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg, "citations": []}
-                )
+        except Exception as exc:
+            error_msg = f"Unexpected error: {exc}"
+            st.error(error_msg)
+            st.session_state.messages.append(
+                {"role": "assistant", "content": error_msg, "citations": []}
+            )

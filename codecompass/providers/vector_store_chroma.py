@@ -56,7 +56,7 @@ class ChromaVectorStore(VectorStore):
                 score=1.0 - distance,
             )
             for doc_id, document, metadata, distance in zip(
-                ids, documents, metadatas, distances
+                ids, documents, metadatas, distances, strict=False
             )
         ]
 

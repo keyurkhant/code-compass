@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from codecompass.ingest.chunker import chunk_file
 from codecompass.ingest.chunker_fallback import FallbackChunker
 from codecompass.ingest.chunker_treesitter import TreeSitterChunker

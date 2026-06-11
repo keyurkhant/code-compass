@@ -1,8 +1,9 @@
 import ast
 import logging
 from pathlib import Path
-from codecompass.ingest.models import CodeChunk
+
 from codecompass.graph.model import DependencyGraph, GraphEdge, GraphNode
+from codecompass.ingest.models import CodeChunk
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,8 @@ def _extract_python_imports(source: str) -> list[str]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 imports.append(alias.name.split(".")[0])
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                imports.append(node.module.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.append(node.module.split(".")[0])
     return imports
 
 
@@ -35,13 +35,15 @@ def extract_dependencies(chunks: list[CodeChunk], repo_root: Path) -> Dependency
         node_id = f"{chunk.repo}:{chunk.path}"
         if node_id not in path_to_node:
             path_to_node[chunk.path] = node_id
-            graph.add_node(GraphNode(
-                id=node_id,
-                repo=chunk.repo,
-                path=chunk.path,
-                language=chunk.language,
-                node_type="file",
-            ))
+            graph.add_node(
+                GraphNode(
+                    id=node_id,
+                    repo=chunk.repo,
+                    path=chunk.path,
+                    language=chunk.language,
+                    node_type="file",
+                )
+            )
 
     # Extract imports for Python files
     seen_files: set[str] = set()
@@ -62,7 +64,8 @@ def extract_dependencies(chunks: list[CodeChunk], repo_root: Path) -> Dependency
         for imported_module in imports:
             # Resolve relative to repo: check if any file matches
             candidates = [
-                p for p in path_to_node
+                p
+                for p in path_to_node
                 if p.replace("/", ".").replace("\\", ".").endswith(imported_module)
                 or p.endswith(f"{imported_module}.py")
                 or p.endswith(f"{imported_module}/__init__.py")
@@ -70,10 +73,12 @@ def extract_dependencies(chunks: list[CodeChunk], repo_root: Path) -> Dependency
             for candidate_path in candidates:
                 target_id = path_to_node[candidate_path]
                 if target_id != source_id:
-                    graph.add_edge(GraphEdge(
-                        source=source_id,
-                        target=target_id,
-                        edge_type="imports",
-                    ))
+                    graph.add_edge(
+                        GraphEdge(
+                            source=source_id,
+                            target=target_id,
+                            edge_type="imports",
+                        )
+                    )
 
     return graph

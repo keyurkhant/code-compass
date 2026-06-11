@@ -1,16 +1,17 @@
-from dataclasses import dataclass, field
 import hashlib
+from dataclasses import dataclass
+
 
 @dataclass
 class CodeChunk:
     id: str
     repo: str
-    path: str          # relative to repo root
+    path: str  # relative to repo root
     language: str
     symbol_name: str | None
     start_line: int
     end_line: int
-    content: str       # raw source text of the chunk
+    content: str  # raw source text of the chunk
     context_prefix: str  # file path header + enclosing signature + key imports
 
     @staticmethod

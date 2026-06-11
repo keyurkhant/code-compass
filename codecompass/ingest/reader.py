@@ -1,14 +1,19 @@
-from pathlib import Path
-import tempfile
-import git
 import logging
+import tempfile
+from pathlib import Path
+
+import git
+
+from codecompass.ingest.chunker import chunk_file
 from codecompass.ingest.models import CodeChunk
 from codecompass.ingest.walker import walk_repo
-from codecompass.ingest.chunker import chunk_file
 
 logger = logging.getLogger(__name__)
 
-def ingest_repo(repo_path_or_url: str, repo_name: str | None = None) -> tuple[list[CodeChunk], Path]:
+
+def ingest_repo(
+    repo_path_or_url: str, repo_name: str | None = None
+) -> tuple[list[CodeChunk], Path]:
     """
     Ingest a local path or remote git URL.
     Returns (chunks, repo_root_path).

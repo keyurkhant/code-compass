@@ -1,4 +1,4 @@
-from codecompass.eval.metrics import recall_at_k, reciprocal_rank, mean_reciprocal_rank, ndcg_at_k
+from codecompass.eval.metrics import mean_reciprocal_rank, ndcg_at_k, recall_at_k, reciprocal_rank
 
 
 def test_recall_at_k_perfect():

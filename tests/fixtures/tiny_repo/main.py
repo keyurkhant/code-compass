@@ -1,4 +1,5 @@
 """Entry point for the tiny test repo."""
+
 from tiny_repo.utils import parse_args, validate_config
 
 

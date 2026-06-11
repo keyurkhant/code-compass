@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
+
+from codecompass.eval.metrics import mean_reciprocal_rank, recall_at_k, reciprocal_rank
 from codecompass.generate.answerer import Answerer
-from codecompass.eval.metrics import recall_at_k, reciprocal_rank, mean_reciprocal_rank, ndcg_at_k
 
 
 @dataclass
@@ -52,6 +53,7 @@ def run_eval(
     for entry in golden:
         # Use the answerer's internal retrieve pipeline
         from codecompass.retrieve.hybrid import hybrid_search
+
         results = hybrid_search(
             query=entry.question,
             provider=answerer._embedder,
@@ -76,7 +78,9 @@ def run_eval(
         per_query=per_query,
         recall_at_1=sum(pq.recall_at_1 for pq in per_query) / len(per_query) if per_query else 0.0,
         recall_at_5=sum(pq.recall_at_5 for pq in per_query) / len(per_query) if per_query else 0.0,
-        recall_at_10=sum(pq.recall_at_10 for pq in per_query) / len(per_query) if per_query else 0.0,
+        recall_at_10=sum(pq.recall_at_10 for pq in per_query) / len(per_query)
+        if per_query
+        else 0.0,
         mrr=mean_reciprocal_rank([pq.rr for pq in per_query]),
         num_queries=len(per_query),
     )

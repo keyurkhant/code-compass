@@ -3,14 +3,12 @@
 Splits source files on function/class boundaries for Python, JavaScript, and Go.
 Falls back gracefully when a grammar is unavailable.
 """
+
 from __future__ import annotations
 
 import logging
-from pathlib import Path
-from typing import Any
 
 from codecompass.ingest.models import CodeChunk
-from codecompass.ingest.language import detect_language
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +49,7 @@ MIN_CHUNK_LINES = 5
 # Grammar loader
 # ---------------------------------------------------------------------------
 
+
 def _load_parser(language: str):
     """Return a (parser, Language) pair for the requested language.
 
@@ -62,6 +61,7 @@ def _load_parser(language: str):
 
     if language in ("python",):
         import tree_sitter_python as grammar  # type: ignore
+
         lang_obj = Language(grammar.language())
 
     elif language in ("javascript", "typescript"):
@@ -69,16 +69,20 @@ def _load_parser(language: str):
         try:
             if language == "typescript":
                 import tree_sitter_typescript as grammar  # type: ignore
+
                 lang_obj = Language(grammar.language_typescript())
             else:
                 import tree_sitter_javascript as grammar  # type: ignore
+
                 lang_obj = Language(grammar.language())
         except (ImportError, AttributeError):
             import tree_sitter_javascript as grammar  # type: ignore
+
             lang_obj = Language(grammar.language())
 
     elif language == "go":
         import tree_sitter_go as grammar  # type: ignore
+
         lang_obj = Language(grammar.language())
 
     else:
@@ -91,6 +95,7 @@ def _load_parser(language: str):
 # ---------------------------------------------------------------------------
 # Symbol-name extraction helpers
 # ---------------------------------------------------------------------------
+
 
 def _get_child_by_field(node, field_name: str):
     """Return the first child node matching a field name."""
@@ -136,6 +141,7 @@ def _is_arrow_function_const(node) -> bool:
 # Chunk splitting
 # ---------------------------------------------------------------------------
 
+
 def _split_large_chunk(
     lines: list[str],
     start_line: int,
@@ -177,6 +183,7 @@ def _split_large_chunk(
 # ---------------------------------------------------------------------------
 # Main chunker class
 # ---------------------------------------------------------------------------
+
 
 class TreeSitterChunker:
     """AST-aware chunker that splits on function/class boundaries."""
@@ -227,9 +234,7 @@ class TreeSitterChunker:
         )
 
         # Module-level preamble (before first symbol)
-        chunks.extend(
-            self._preamble_chunk(lines, covered, path, repo, import_lines)
-        )
+        chunks.extend(self._preamble_chunk(lines, covered, path, repo, import_lines))
 
         return chunks
 
@@ -256,8 +261,15 @@ class TreeSitterChunker:
             if node_type == "lexical_declaration" and not _is_arrow_function_const(node):
                 for child in node.children:
                     self._visit(
-                        child, source_bytes, lines, path, repo,
-                        import_lines, enclosing_class, chunks, covered,
+                        child,
+                        source_bytes,
+                        lines,
+                        path,
+                        repo,
+                        import_lines,
+                        enclosing_class,
+                        chunks,
+                        covered,
                     )
                 return
 
@@ -269,8 +281,15 @@ class TreeSitterChunker:
                 # Still recurse for nested definitions
                 for child in node.children:
                     self._visit(
-                        child, source_bytes, lines, path, repo,
-                        import_lines, enclosing_class, chunks, covered,
+                        child,
+                        source_bytes,
+                        lines,
+                        path,
+                        repo,
+                        import_lines,
+                        enclosing_class,
+                        chunks,
+                        covered,
                     )
                 return
 
@@ -281,8 +300,14 @@ class TreeSitterChunker:
 
             if node_lines > MAX_CHUNK_LINES:
                 new_chunks = _split_large_chunk(
-                    lines, start_line, end_line, path, repo,
-                    self.language, symbol_name, context_prefix,
+                    lines,
+                    start_line,
+                    end_line,
+                    path,
+                    repo,
+                    self.language,
+                    symbol_name,
+                    context_prefix,
                 )
             else:
                 content = "\n".join(lines[start_line - 1 : end_line])
@@ -305,21 +330,37 @@ class TreeSitterChunker:
             covered.append((start_line, end_line))
 
             # Recurse into class bodies to also extract methods
-            new_enclosing = symbol_name if node_type in (
-                "class_definition", "class_declaration"
-            ) else enclosing_class
+            new_enclosing = (
+                symbol_name
+                if node_type in ("class_definition", "class_declaration")
+                else enclosing_class
+            )
 
             for child in node.children:
                 self._visit(
-                    child, source_bytes, lines, path, repo,
-                    import_lines, new_enclosing, chunks, covered,
+                    child,
+                    source_bytes,
+                    lines,
+                    path,
+                    repo,
+                    import_lines,
+                    new_enclosing,
+                    chunks,
+                    covered,
                 )
 
         else:
             for child in node.children:
                 self._visit(
-                    child, source_bytes, lines, path, repo,
-                    import_lines, enclosing_class, chunks, covered,
+                    child,
+                    source_bytes,
+                    lines,
+                    path,
+                    repo,
+                    import_lines,
+                    enclosing_class,
+                    chunks,
+                    covered,
                 )
 
     # ------------------------------------------------------------------

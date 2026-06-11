@@ -1,8 +1,10 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 from rich.console import Console
 from rich.table import Table
+
 from codecompass.eval.runner import EvalResult
 
 console = Console()
@@ -21,7 +23,7 @@ def print_eval_table(result: EvalResult) -> None:
 
 def save_eval_result(result: EvalResult, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out_path = output_dir / f"eval_{ts}.json"
     data = {
         "timestamp": ts,

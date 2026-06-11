@@ -13,5 +13,5 @@ def embed_chunks(
         batch = chunks[i : i + batch_size]
         texts = [c.embed_text() for c in batch]
         embeddings = provider.embed(texts)
-        results.extend(zip(batch, embeddings))
+        results.extend(zip(batch, embeddings, strict=False))
     return results

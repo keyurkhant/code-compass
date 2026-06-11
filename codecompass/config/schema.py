@@ -15,8 +15,8 @@ class LLMConfig:
 
 @dataclass
 class EmbeddingConfig:
-    model: str = "jinaai/jina-embeddings-v2-base-code"
-    batch_size: int = 32
+    model: str = "BAAI/bge-small-en-v1.5"
+    batch_size: int = 256
 
 
 @dataclass

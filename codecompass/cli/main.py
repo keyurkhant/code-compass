@@ -101,7 +101,8 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
         embedder.preload()
         p.update(task, description="Embedding model ready", completed=1, total=1)
 
-    # Step 2b: embed
+    # Step 2b: embed — single fastembed call over all texts; iterate the generator for live progress
+    all_texts = [c.embed_text() for c in chunks]
     with Progress(
         SpinnerColumn(),
         TextColumn("{task.description}"),
@@ -110,14 +111,10 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
         console=console,
     ) as p:
         task = p.add_task("Embedding chunks...", total=len(chunks))
-        batch_size = config.embedding.batch_size
         chunks_with_embeddings = []
-        for i in range(0, len(chunks), batch_size):
-            batch = chunks[i : i + batch_size]
-            texts = [c.embed_text() for c in batch]
-            embeddings = embedder.embed(texts)
-            chunks_with_embeddings.extend(zip(batch, embeddings, strict=False))
-            p.advance(task, len(batch))
+        for chunk, emb in zip(chunks, embedder.stream_embed(all_texts), strict=False):
+            chunks_with_embeddings.append((chunk, emb))
+            p.advance(task, 1)
 
     # Step 3: vector store
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:

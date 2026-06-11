@@ -3,21 +3,22 @@
 ~10× faster than sentence-transformers on CPU; no GPU required.
 Models are downloaded once to ~/.cache/fastembed/.
 
-Good code-aware models:
-    jinaai/jina-embeddings-v2-base-code   768-dim  best for code (default)
-    BAAI/bge-small-en-v1.5               384-dim  fastest, still good
-    BAAI/bge-base-en-v1.5               768-dim  balanced
+Default model: BAAI/bge-small-en-v1.5  (~22 MB, ~10x faster than jina on CPU)
+Code-optimised alternative: jinaai/jina-embeddings-v2-base-code (~311 MB, best quality for code)
+
+Switch model:
+    codecompass config set embedding.model jinaai/jina-embeddings-v2-base-code
 """
 
 from __future__ import annotations
+
+from collections.abc import Generator
 
 from codecompass.providers.base import EmbeddingProvider
 
 
 class FastEmbedProvider(EmbeddingProvider):
-    def __init__(
-        self, model_name: str = "jinaai/jina-embeddings-v2-base-code", batch_size: int = 32
-    ) -> None:
+    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", batch_size: int = 256) -> None:
         self._model_name = model_name
         self._batch_size = batch_size
         self._model = None
@@ -38,9 +39,19 @@ class FastEmbedProvider(EmbeddingProvider):
         """
         self._load()
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    def stream_embed(self, texts: list[str]) -> Generator[list[float], None, None]:
+        """Yield embeddings one-by-one from a single fastembed generator call.
+
+        Passes all texts in one call so fastembed handles internal batching
+        efficiently (no per-batch Python/ONNX overhead). Callers get per-item
+        progress by iterating the generator.
+        """
         model = self._load()
-        return [emb.tolist() for emb in model.embed(texts, batch_size=self._batch_size)]
+        for emb in model.embed(texts, batch_size=self._batch_size):
+            yield emb.tolist()
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return list(self.stream_embed(texts))
 
     @property
     def dimension(self) -> int:

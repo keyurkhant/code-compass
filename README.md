@@ -110,8 +110,8 @@ Config keys:
 | `llm.base_url` | *(provider default)* | Override endpoint URL |
 | `llm.api_key` | *(env var)* | API key (prefer env vars) |
 | `llm.timeout` | `120` | Request timeout in seconds |
-| `embedding.model` | `jinaai/jina-embeddings-v2-base-code` | FastEmbed model |
-| `embedding.batch_size` | `32` | Embedding batch size |
+| `embedding.model` | `BAAI/bge-small-en-v1.5` | FastEmbed model (~22 MB, fast). Use `jinaai/jina-embeddings-v2-base-code` for best code quality (~311 MB, ~10× slower) |
+| `embedding.batch_size` | `256` | Embedding batch size |
 | `store.data_dir` | `~/.codecompass` | Where indexes and graph DB are stored |
 | `retrieval.top_k` | `10` | Chunks retrieved per query |
 | `retrieval.token_budget` | `6000` | Max context tokens sent to the LLM |

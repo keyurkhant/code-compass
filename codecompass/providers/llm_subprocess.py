@@ -13,6 +13,7 @@ SubprocessProvider: generic template. User sets llm.cmd_template in config.
 
 import json
 import logging
+import os
 import shlex
 import subprocess
 
@@ -53,12 +54,18 @@ class ClaudeCodeProvider(LLMProvider):
         if self._model:
             cmd += ["--model", self._model]
 
+        # Strip ANTHROPIC_API_KEY so the claude CLI uses OAuth, not a stale/invalid key.
+        # If ANTHROPIC_API_KEY is present in the environment the CLI prefers it over OAuth,
+        # which causes a 401 when the key is expired or belongs to a different account.
+        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+
         try:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,
+                env=env,
             )
         except FileNotFoundError as e:
             raise RuntimeError(

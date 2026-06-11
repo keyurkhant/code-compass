@@ -3,7 +3,7 @@ import re
 
 import tiktoken
 
-from codecompass.config import Settings
+from codecompass.config.schema import Config
 from codecompass.generate.models import Answer, Citation
 from codecompass.generate.prompts import SYSTEM_PROMPT, build_context_block, build_user_message
 from codecompass.index.bm25_indexer import BM25Index
@@ -28,13 +28,13 @@ class Answerer:
         embedder: EmbeddingProvider,
         store: VectorStore,
         bm25: BM25Index | None,
-        settings: Settings,
+        config: Config,
     ) -> None:
         self._llm = llm
         self._embedder = embedder
         self._store = store
         self._bm25 = bm25
-        self._settings = settings
+        self._config = config
 
     def answer(self, question: str, filters: dict | None = None) -> Answer:
         results = hybrid_search(
@@ -42,11 +42,11 @@ class Answerer:
             provider=self._embedder,
             store=self._store,
             bm25_index=self._bm25,
-            top_k=self._settings.top_k_retrieve,
+            top_k=self._config.retrieval.top_k,
             filters=filters,
         )
 
-        packed = pack_context(results, self._settings.token_budget, _count_tokens)
+        packed = pack_context(results, self._config.retrieval.token_budget, _count_tokens)
 
         if not packed:
             return Answer(

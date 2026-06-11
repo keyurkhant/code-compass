@@ -1,41 +1,39 @@
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 
 from codecompass.api.routers import ask, health
-from codecompass.config import get_settings
-from codecompass.generate.answerer import Answerer
-from codecompass.index.bm25_indexer import BM25Index
-from codecompass.providers.embedding_fastembed import FastEmbedProvider
-from codecompass.providers.llm_litellm import LiteLLMProvider
-from codecompass.providers.vector_store_chroma import ChromaVectorStore
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = get_settings()
+    from codecompass.config.manager import load_config
+    from codecompass.generate.answerer import Answerer
+    from codecompass.index.bm25_indexer import BM25Index
+    from codecompass.providers.factory import get_embedding_provider, get_llm_provider
+    from codecompass.providers.vector_store_chroma import ChromaVectorStore
 
-    embedder = FastEmbedProvider(settings.embedding_model_name)
-    llm = LiteLLMProvider(settings.llm_model)
+    config = load_config()
+    data_dir = config.store.resolved_data_dir()
+
+    llm = get_llm_provider(config)
+    embedder = get_embedding_provider(config)
     store = ChromaVectorStore(
-        persist_dir=settings.chroma_persist_dir,
-        collection_name=f"{settings.chroma_collection_prefix}_default",
+        persist_dir=str(data_dir / "chroma"),
+        collection_name="codecompass_default",
     )
 
     bm25 = BM25Index()
-    bm25_path = Path(settings.bm25_index_path)
+    bm25_path = data_dir / "bm25_index.pkl"
     if bm25_path.exists():
         bm25.load(bm25_path)
         logger.info("Loaded BM25 index from %s", bm25_path)
 
-    app.state.answerer = Answerer(
-        llm=llm, embedder=embedder, store=store, bm25=bm25, settings=settings
-    )
-    logger.info("Answerer initialized (model=%s)", settings.llm_model)
+    app.state.answerer = Answerer(llm=llm, embedder=embedder, store=store, bm25=bm25, config=config)
+    logger.info("Answerer initialized (provider=%s)", config.llm.provider)
     yield
 
 

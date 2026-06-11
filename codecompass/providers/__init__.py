@@ -1,15 +1,12 @@
-from codecompass.providers.base import (
-    EmbeddingProvider as EmbeddingProvider,
-)
-from codecompass.providers.base import (
-    LLMProvider as LLMProvider,
-)
-from codecompass.providers.base import (
-    SearchResult as SearchResult,
-)
-from codecompass.providers.base import (
-    VectorStore as VectorStore,
-)
+from codecompass.providers.base import EmbeddingProvider as EmbeddingProvider
+from codecompass.providers.base import LLMProvider as LLMProvider
+from codecompass.providers.base import SearchResult as SearchResult
+from codecompass.providers.base import VectorStore as VectorStore
 from codecompass.providers.embedding_fastembed import FastEmbedProvider as FastEmbedProvider
+from codecompass.providers.factory import get_embedding_provider as get_embedding_provider
+from codecompass.providers.factory import get_llm_provider as get_llm_provider
 from codecompass.providers.llm_litellm import LiteLLMProvider as LiteLLMProvider
+from codecompass.providers.llm_ollama import OllamaProvider as OllamaProvider
+from codecompass.providers.llm_openai_compat import OpenAICompatProvider as OpenAICompatProvider
+from codecompass.providers.llm_subprocess import ClaudeCodeProvider as ClaudeCodeProvider
 from codecompass.providers.vector_store_chroma import ChromaVectorStore as ChromaVectorStore

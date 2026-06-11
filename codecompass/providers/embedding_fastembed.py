@@ -15,8 +15,11 @@ from codecompass.providers.base import EmbeddingProvider
 
 
 class FastEmbedProvider(EmbeddingProvider):
-    def __init__(self, model_name: str = "jinaai/jina-embeddings-v2-base-code") -> None:
+    def __init__(
+        self, model_name: str = "jinaai/jina-embeddings-v2-base-code", batch_size: int = 32
+    ) -> None:
         self._model_name = model_name
+        self._batch_size = batch_size
         self._model = None
         self._dim: int | None = None
 
@@ -27,9 +30,17 @@ class FastEmbedProvider(EmbeddingProvider):
             self._model = TextEmbedding(self._model_name)
         return self._model
 
+    def preload(self) -> None:
+        """Explicitly load the ONNX model into memory (and download if needed).
+
+        Call this once before a batch job so the model warm-up cost is visible
+        to the user rather than silently freezing the first embed() call.
+        """
+        self._load()
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         model = self._load()
-        return [emb.tolist() for emb in model.embed(texts)]
+        return [emb.tolist() for emb in model.embed(texts, batch_size=self._batch_size)]
 
     @property
     def dimension(self) -> int:

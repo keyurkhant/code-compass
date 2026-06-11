@@ -68,7 +68,9 @@ def get_embedding_provider(config: Config) -> EmbeddingProvider:
     """Return the configured embedding provider."""
     from codecompass.providers.embedding_fastembed import FastEmbedProvider
 
-    return FastEmbedProvider(model_name=config.embedding.model)
+    return FastEmbedProvider(
+        model_name=config.embedding.model, batch_size=config.embedding.batch_size
+    )
 
 
 def _auto_detect(config: Config) -> str:

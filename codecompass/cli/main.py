@@ -91,7 +91,17 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
         except Exception as exc:
             console.print(f"[yellow]Warning:[/yellow] {exc}")
 
-    # Step 2: embed
+    # Step 2a: load the embedding model (download on first use, ~300 MB for default model)
+    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
+        task = p.add_task(
+            f"Loading embedding model [cyan]{config.embedding.model}[/cyan]"
+            " (first run downloads the model, may take a minute)...",
+            total=None,
+        )
+        embedder.preload()
+        p.update(task, description="Embedding model ready", completed=1, total=1)
+
+    # Step 2b: embed
     with Progress(
         SpinnerColumn(),
         TextColumn("{task.description}"),

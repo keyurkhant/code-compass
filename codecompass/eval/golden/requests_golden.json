@@ -1,0 +1,122 @@
+[
+  {
+    "question": "Where is the Session class defined?",
+    "relevant_paths": ["requests/sessions.py"],
+    "reference_answer": "The Session class is defined in requests/sessions.py",
+    "tags": ["factual", "class-definition"]
+  },
+  {
+    "question": "How are HTTP adapters mounted and registered in requests?",
+    "relevant_paths": ["requests/sessions.py", "requests/adapters.py"],
+    "reference_answer": "HTTP adapters are mounted via Session.mount(), which adds them to a sorted dict keyed by URL prefix. The HTTPAdapter class in adapters.py implements the actual adapter interface.",
+    "tags": ["factual", "adapters", "session"]
+  },
+  {
+    "question": "Where is PreparedRequest built and assembled?",
+    "relevant_paths": ["requests/models.py", "requests/sessions.py"],
+    "reference_answer": "PreparedRequest is defined in requests/models.py with a prepare() method. It is assembled in Session.prepare_request() in sessions.py.",
+    "tags": ["factual", "models", "request-preparation"]
+  },
+  {
+    "question": "How is authentication applied via the auth parameter in requests?",
+    "relevant_paths": ["requests/sessions.py", "requests/auth.py"],
+    "reference_answer": "The auth parameter is resolved in Session.prepare_request() and applied by calling auth(prepared_request). Auth classes in auth.py (e.g. HTTPBasicAuth) implement __call__ to modify the request headers.",
+    "tags": ["factual", "auth", "session"]
+  },
+  {
+    "question": "Where are HTTP redirects handled in the requests library?",
+    "relevant_paths": ["requests/sessions.py"],
+    "reference_answer": "Redirects are handled in Session.resolve_redirects() in sessions.py, which follows the redirect chain up to max_redirects.",
+    "tags": ["factual", "redirects", "session"]
+  },
+  {
+    "question": "How are timeouts configured in a requests call?",
+    "relevant_paths": ["requests/sessions.py", "requests/adapters.py"],
+    "reference_answer": "Timeouts are passed as the timeout parameter to Session.request() or the convenience functions. They are forwarded through Session.send() and ultimately used in HTTPAdapter.send() when making the urllib3 connection.",
+    "tags": ["factual", "timeout", "adapters"]
+  },
+  {
+    "question": "Where are cookies merged and managed in requests?",
+    "relevant_paths": ["requests/sessions.py", "requests/cookies.py"],
+    "reference_answer": "Cookies are managed via the RequestsCookieJar class in cookies.py. In sessions.py, Session.request() merges per-request cookies with the session-level cookie jar using merge_setting and merge_cookies.",
+    "tags": ["factual", "cookies", "session"]
+  },
+  {
+    "question": "How does the get() convenience function work in requests?",
+    "relevant_paths": ["requests/api.py", "requests/sessions.py"],
+    "reference_answer": "requests.get() is a module-level function in api.py that creates a one-off Session and calls Session.get(), which in turn calls Session.request() with method='GET'.",
+    "tags": ["factual", "api", "convenience-functions"]
+  },
+  {
+    "question": "Where is the Response object defined?",
+    "relevant_paths": ["requests/models.py"],
+    "reference_answer": "The Response class is defined in requests/models.py. It holds the HTTP response status, headers, body content, and provides helpers like .json() and .text.",
+    "tags": ["factual", "models", "response"]
+  },
+  {
+    "question": "How does connection pooling work in requests via HTTPAdapter?",
+    "relevant_paths": ["requests/adapters.py"],
+    "reference_answer": "HTTPAdapter in adapters.py maintains a urllib3 PoolManager (and ProxyManager for proxies). It calls get_connection() to retrieve or create a pool for a given URL prefix, reusing connections within the pool.",
+    "tags": ["factual", "adapters", "connection-pooling"]
+  },
+  {
+    "question": "Where does URL encoding happen in requests?",
+    "relevant_paths": ["requests/models.py", "requests/utils.py"],
+    "reference_answer": "URL encoding is performed in PreparedRequest.prepare_url() in models.py, using helpers from utils.py such as requote_uri() and to_key_val_list() for query parameter encoding.",
+    "tags": ["factual", "url-encoding", "models"]
+  },
+  {
+    "question": "How is SSL verification configured in requests?",
+    "relevant_paths": ["requests/adapters.py", "requests/sessions.py"],
+    "reference_answer": "SSL verification is controlled by the verify parameter in Session.request(). It is passed through Session.send() to HTTPAdapter.send(), where it is applied to the urllib3 connection via the cert_reqs and ca_certs arguments.",
+    "tags": ["factual", "ssl", "security", "adapters"]
+  },
+  {
+    "question": "Where are exceptions like ConnectionError defined in requests?",
+    "relevant_paths": ["requests/exceptions.py"],
+    "reference_answer": "All requests-specific exceptions including ConnectionError, Timeout, HTTPError, and TooManyRedirects are defined in requests/exceptions.py.",
+    "tags": ["factual", "exceptions", "error-handling"]
+  },
+  {
+    "question": "How are proxy settings applied in requests?",
+    "relevant_paths": ["requests/sessions.py", "requests/adapters.py", "requests/utils.py"],
+    "reference_answer": "Proxy settings are resolved in Session.rebuild_proxies() and Session.merge_environment_settings() in sessions.py using helpers from utils.py. They are passed to HTTPAdapter.send() which uses urllib3's ProxyManager.",
+    "tags": ["factual", "proxies", "session", "adapters"]
+  },
+  {
+    "question": "Where is the requests library version defined?",
+    "relevant_paths": ["requests/__version__.py", "requests/__init__.py"],
+    "reference_answer": "The version string is defined in requests/__version__.py and re-exported from requests/__init__.py as requests.__version__.",
+    "tags": ["factual", "version", "metadata"]
+  },
+  {
+    "question": "How do hooks work in requests?",
+    "relevant_paths": ["requests/hooks.py", "requests/sessions.py", "requests/models.py"],
+    "reference_answer": "Hooks are registered as callables in a dict keyed by event name (e.g. 'response'). default_hooks() in hooks.py initialises the dict, dispatch_hook() fires them, and Session.send() calls dispatch_hook('response', ...) after each response.",
+    "tags": ["factual", "hooks", "events"]
+  },
+  {
+    "question": "Where does content encoding and decoding happen in requests?",
+    "relevant_paths": ["requests/utils.py", "requests/models.py"],
+    "reference_answer": "Content decoding is handled in Response.content and Response.text in models.py, using get_encoding_from_headers() and apparent_encoding from utils.py to detect the charset before decoding the raw bytes.",
+    "tags": ["factual", "encoding", "models"]
+  },
+  {
+    "question": "How does basic authentication work with HTTPBasicAuth?",
+    "relevant_paths": ["requests/auth.py"],
+    "reference_answer": "HTTPBasicAuth is defined in requests/auth.py. Its __call__ method encodes the username and password with base64 and sets the Authorization header on the PreparedRequest.",
+    "tags": ["factual", "auth", "basic-auth"]
+  },
+  {
+    "question": "Where are the default headers set for a requests Session?",
+    "relevant_paths": ["requests/utils.py", "requests/sessions.py"],
+    "reference_answer": "Default headers are built by default_headers() in utils.py (User-Agent, Accept-Encoding, Accept, Connection) and assigned to Session.headers in Session.__init__() in sessions.py.",
+    "tags": ["factual", "headers", "session"]
+  },
+  {
+    "question": "How do streaming responses work in requests?",
+    "relevant_paths": ["requests/sessions.py", "requests/adapters.py", "requests/models.py"],
+    "reference_answer": "Streaming is enabled by passing stream=True to Session.request(). HTTPAdapter.send() passes it to urllib3, keeping the socket open. Response.iter_content() and Response.iter_lines() in models.py yield decoded chunks from the raw urllib3 response.",
+    "tags": ["factual", "streaming", "response"]
+  }
+]

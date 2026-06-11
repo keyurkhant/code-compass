@@ -1,11 +1,13 @@
 """LLM providers that call external CLI tools via subprocess.
 
-ClaudeCodeProvider: calls `claude --bare -p "..." --output-format json`
+ClaudeCodeProvider: calls `claude -p "..." --output-format json --no-session-persistence`
   Works with Claude Code (claude.ai/claude-code) authenticated via OAuth.
   No API key required — uses the user's existing session.
 
+  NOTE: do NOT use --bare. That flag disables OAuth and requires ANTHROPIC_API_KEY.
+
 SubprocessProvider: generic template. User sets llm.cmd_template in config.
-  Example: "claude --bare -p {prompt} --output-format json"
+  Example: "claude -p {prompt} --output-format json"
            "ollama run llama3 {prompt}"
 """
 
@@ -18,7 +20,7 @@ from codecompass.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
-CLAUDE_CMD = ["claude", "--bare", "--output-format", "json"]
+CLAUDE_CMD = ["claude", "--output-format", "json", "--no-session-persistence"]
 
 
 def _messages_to_prompt(messages: list[dict], system: str | None) -> str:
@@ -66,16 +68,25 @@ class ClaudeCodeProvider(LLMProvider):
             raise RuntimeError(f"claude CLI timed out after {self._timeout}s") from e
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"claude CLI error (exit {result.returncode}): {result.stderr[:500]}"
-            )
+            # stdout may contain a JSON error payload with more detail than stderr
+            detail = result.stderr.strip() or result.stdout.strip()
+            try:
+                payload = json.loads(result.stdout)
+                if payload.get("result"):
+                    detail = payload["result"]
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            raise RuntimeError(f"claude CLI error (exit {result.returncode}): {detail[:500]}")
 
-        # Claude CLI with --output-format json returns {"result": "...", "type": "result", ...}
+        # Claude CLI --output-format json returns {"type":"result","result":"...","is_error":false,...}
         try:
             data = json.loads(result.stdout)
+            if data.get("is_error"):
+                raise RuntimeError(
+                    f"claude returned an error: {data.get('result', result.stdout)[:500]}"
+                )
             return data.get("result") or data.get("content") or str(data)
         except json.JSONDecodeError:
-            # Fall back to raw stdout
             return result.stdout.strip()
 
 

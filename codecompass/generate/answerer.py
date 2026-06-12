@@ -72,6 +72,47 @@ class Answerer:
             retrieved_chunk_ids=[r.id for r in packed],
         )
 
+    def stream_answer(self, question: str, filters: dict | None = None):
+        """Generator: yields str chunks while streaming, then yields the final Answer."""
+        results = hybrid_search(
+            query=question,
+            provider=self._embedder,
+            store=self._store,
+            bm25_index=self._bm25,
+            top_k=self._config.retrieval.top_k,
+            filters=filters,
+        )
+
+        packed = pack_context(results, self._config.retrieval.token_budget, _count_tokens)
+
+        if not packed:
+            yield Answer(
+                text="I don't have enough context to answer this question. No relevant code was retrieved.",
+                citations=[],
+                question=question,
+            )
+            return
+
+        context_block = build_context_block(packed)
+        user_msg = build_user_message(context_block, question)
+
+        full_text = ""
+        for chunk in self._llm.stream_complete(
+            messages=[{"role": "user", "content": user_msg}],
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+        ):
+            full_text += chunk
+            yield chunk
+
+        citations = _extract_citations(full_text, packed)
+        yield Answer(
+            text=full_text,
+            citations=citations,
+            question=question,
+            retrieved_chunk_ids=[r.id for r in packed],
+        )
+
 
 def _extract_citations(text: str, results) -> list[Citation]:
     citations: list[Citation] = []

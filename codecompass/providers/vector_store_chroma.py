@@ -62,3 +62,8 @@ class ChromaVectorStore(VectorStore):
 
     def delete_collection(self, name: str) -> None:
         self._client.delete_collection(name)
+
+    def delete_where(self, where: dict) -> None:
+        results = self._collection.get(where=where, include=[])
+        if results["ids"]:
+            self._collection.delete(ids=results["ids"])

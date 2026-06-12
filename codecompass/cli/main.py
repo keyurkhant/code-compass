@@ -14,6 +14,7 @@ Commands:
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 import sys
 from pathlib import Path
@@ -58,6 +59,7 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
     from codecompass.graph.extractor import build_graph
     from codecompass.graph.model import GraphDB
     from codecompass.index.bm25_indexer import BM25Index
+    from codecompass.index.ingest_state import IngestStateDB, compute_file_hash
     from codecompass.index.vector_indexer import index_chunks
     from codecompass.ingest.reader import ingest_repo
 
@@ -67,6 +69,7 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
     data_dir.mkdir(parents=True, exist_ok=True)
     bm25_path = data_dir / "bm25_index.pkl"
     graph_db_path = data_dir / "graph.db"
+    state_db_path = data_dir / "ingest_hashes.db"
 
     # Step 1: walk + chunk
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
@@ -83,6 +86,8 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
     console.print(f"Collection: [cyan]{collection_name}[/cyan]")
 
     store = _build_store(config, collection_name)
+
+    # --force: wipe everything and rebuild from scratch
     if force:
         console.print("[yellow]--force:[/yellow] rebuilding existing collection...")
         try:
@@ -90,39 +95,97 @@ def _do_ingest(repo_path_or_url: str, repo_name: str | None, force: bool, config
             store = _build_store(config, collection_name)
         except Exception as exc:
             console.print(f"[yellow]Warning:[/yellow] {exc}")
+        # Also reset the hash store so all files are treated as new
+        if state_db_path.exists():
+            state_db_path.unlink()
 
-    # Step 2a: load the embedding model (download on first use, ~300 MB for default model)
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
-        task = p.add_task(
-            f"Loading embedding model [cyan]{config.embedding.model}[/cyan]"
-            " (first run downloads the model, may take a minute)...",
-            total=None,
+    # Step 1b: incremental hash check — find what actually changed
+    state_db = IngestStateDB(state_db_path)
+
+    chunks_by_path: dict[str, list] = {}
+    for chunk in chunks:
+        chunks_by_path.setdefault(chunk.path, []).append(chunk)
+
+    current_hashes: dict[str, str] = {}
+    new_or_changed_paths: set[str] = set()
+
+    for rel_path in chunks_by_path:
+        abs_path = Path(repo_root) / rel_path
+        try:
+            fh = compute_file_hash(abs_path)
+        except OSError:
+            fh = ""
+        current_hashes[rel_path] = fh
+        if state_db.get_hash(derived_name, rel_path) != fh:
+            new_or_changed_paths.add(rel_path)
+
+    # Files in the hash store that no longer exist in the repo
+    removed_paths = state_db.get_all_paths(derived_name) - set(chunks_by_path.keys())
+
+    paths_to_delete = new_or_changed_paths | removed_paths
+    if paths_to_delete:
+        with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
+            task = p.add_task(
+                f"Removing {len(paths_to_delete)} stale file(s) from index...", total=None
+            )
+            for path in paths_to_delete:
+                with contextlib.suppress(Exception):
+                    store.delete_where({"path": {"$eq": path}})
+            state_db.delete_paths(derived_name, removed_paths)
+            p.update(task, description="Removed stale entries", completed=1, total=1)
+
+    changed_chunks = [c for c in chunks if c.path in new_or_changed_paths]
+
+    if not changed_chunks and not force:
+        console.print(
+            f"[green]Index up to date.[/green] "
+            f"{len(chunks)} chunks across {len(chunks_by_path)} files — nothing changed."
         )
-        embedder.preload()
-        p.update(task, description="Embedding model ready", completed=1, total=1)
+        # BM25 and graph still need to run (fast operations)
+    else:
+        skipped = len(chunks) - len(changed_chunks)
+        if skipped:
+            console.print(
+                f"[cyan]Incremental:[/cyan] {len(changed_chunks)} chunks to embed "
+                f"({skipped} unchanged, skipped)"
+            )
 
-    # Step 2b: embed — single fastembed call over all texts; iterate the generator for live progress
-    all_texts = [c.embed_text() for c in chunks]
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        console=console,
-    ) as p:
-        task = p.add_task("Embedding chunks...", total=len(chunks))
-        chunks_with_embeddings = []
-        for chunk, emb in zip(chunks, embedder.stream_embed(all_texts), strict=False):
-            chunks_with_embeddings.append((chunk, emb))
-            p.advance(task, 1)
+        # Step 2a: load the embedding model
+        with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
+            task = p.add_task(
+                f"Loading embedding model [cyan]{config.embedding.model}[/cyan]"
+                " (first run downloads the model, may take a minute)...",
+                total=None,
+            )
+            embedder.preload()
+            p.update(task, description="Embedding model ready", completed=1, total=1)
 
-    # Step 3: vector store
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
-        task = p.add_task("Indexing into vector store...", total=None)
-        count = index_chunks(chunks_with_embeddings, store)
-        p.update(task, description=f"Indexed {count} chunks", completed=1, total=1)
+        # Step 2b: embed only changed chunks
+        all_texts = [c.embed_text() for c in changed_chunks]
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            console=console,
+        ) as p:
+            task = p.add_task("Embedding chunks...", total=len(changed_chunks))
+            chunks_with_embeddings = []
+            for chunk, emb in zip(changed_chunks, embedder.stream_embed(all_texts), strict=False):
+                chunks_with_embeddings.append((chunk, emb))
+                p.advance(task, 1)
 
-    # Step 4: BM25
+        # Step 3: vector store
+        with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
+            task = p.add_task("Indexing into vector store...", total=None)
+            count = index_chunks(chunks_with_embeddings, store)
+            p.update(task, description=f"Indexed {count} chunks", completed=1, total=1)
+
+    # Update hash store for all current files
+    state_db.set_hashes_bulk(derived_name, current_hashes)
+    state_db.close()
+
+    # Step 4: BM25 (always rebuild — fast, ensures consistency)
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as p:
         task = p.add_task("Building BM25 index...", total=None)
         bm25 = BM25Index()
@@ -275,22 +338,30 @@ def ask_cmd(
 
     answerer = Answerer(llm=llm, embedder=embedder, store=store, bm25=bm25, config=config)
 
+    from codecompass.generate.models import Answer as _Answer
+
     console.print(f"\n[bold cyan]Question:[/bold cyan] {question}\n")
+    console.rule("[bold green]Answer[/bold green]")
 
-    with console.status("[bold green]Thinking...[/bold green]", spinner="dots"):
-        try:
-            answer = answerer.answer(question, filters=filters)
-        except Exception as exc:
-            console.print(f"[red]Error:[/red] {exc}")
-            sys.exit(1)
+    final_answer = None
+    try:
+        for item in answerer.stream_answer(question, filters=filters):
+            if isinstance(item, _Answer):
+                final_answer = item
+            else:
+                print(item, end="", flush=True)
+    except Exception as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
 
-    console.print(Panel(answer.text, title="Answer", border_style="green"))
+    print()  # newline after streamed tokens
+    console.rule()
 
-    if answer.citations:
+    if final_answer and final_answer.citations:
         table = Table(title="Citations", show_header=True, header_style="bold magenta")
         table.add_column("File", style="cyan")
         table.add_column("Lines", justify="right")
-        for c in answer.citations:
+        for c in final_answer.citations:
             table.add_row(c.path, f"{c.start_line}-{c.end_line}")
         console.print(table)
 

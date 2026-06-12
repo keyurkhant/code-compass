@@ -20,6 +20,16 @@ class LLMProvider(ABC):
         system: str | None = None,
     ) -> str: ...
 
+    def stream_complete(
+        self,
+        messages: list[dict],
+        *,
+        max_tokens: int = 2048,
+        system: str | None = None,
+    ):
+        """Yield text chunks. Default: yield the full complete() result in one piece."""
+        yield self.complete(messages, max_tokens=max_tokens, system=system)
+
 
 class EmbeddingProvider(ABC):
     @abstractmethod
@@ -50,3 +60,8 @@ class VectorStore(ABC):
 
     @abstractmethod
     def delete_collection(self, name: str) -> None: ...
+
+    @abstractmethod
+    def delete_where(self, where: dict) -> None:
+        """Delete all documents matching the given metadata filter."""
+        ...

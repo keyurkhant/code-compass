@@ -96,6 +96,73 @@ class ClaudeCodeProvider(LLMProvider):
         except json.JSONDecodeError:
             return result.stdout.strip()
 
+    def stream_complete(
+        self,
+        messages: list[dict],
+        *,
+        max_tokens: int = 2048,
+        system: str | None = None,
+    ):
+        """Yield text chunks via --output-format stream-json."""
+        prompt = _messages_to_prompt(messages, system)
+        cmd = ["claude", "--output-format", "stream-json", "--no-session-persistence", "-p", prompt]
+        if self._model:
+            cmd += ["--model", self._model]
+
+        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+            )
+        except FileNotFoundError as e:
+            raise RuntimeError(
+                "claude CLI not found. Install Claude Code: https://claude.ai/claude-code"
+            ) from e
+
+        streamed_any = False
+        final_result = ""
+
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            etype = event.get("type")
+
+            if etype == "content_block_delta":
+                delta = event.get("delta", {})
+                if delta.get("type") == "text_delta":
+                    chunk = delta.get("text", "")
+                    if chunk:
+                        streamed_any = True
+                        yield chunk
+
+            elif etype == "result":
+                final_result = event.get("result", "")
+                if event.get("is_error"):
+                    proc.wait()
+                    raise RuntimeError(f"claude error: {final_result[:500]}")
+
+        proc.wait()
+
+        if proc.returncode != 0:
+            stderr = proc.stderr.read().strip()
+            detail = stderr or final_result
+            raise RuntimeError(f"claude CLI error (exit {proc.returncode}): {detail[:500]}")
+
+        # Fallback: non-streaming claude versions yield the full result at end
+        if not streamed_any and final_result:
+            yield final_result
+
 
 class SubprocessProvider(LLMProvider):
     """Generic subprocess provider. Configure with llm.cmd_template in config.

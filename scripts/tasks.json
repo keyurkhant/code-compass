@@ -1,0 +1,169 @@
+[
+  {
+    "id": "test-ingest-state",
+    "title": "Add tests for IngestStateDB",
+    "description": "Create tests/test_ingest_state.py with pytest unit tests for IngestStateDB (codecompass/index/ingest_state.py). Cover: storing and retrieving a hash via get_hash, bulk hash storage via set_hashes_bulk, unchanged file returns same hash, changed file detected when hash differs, get_all_paths returns correct set, delete_paths removes entries. Use tmp_path fixture for the DB path.",
+    "context_files": [
+      "codecompass/index/ingest_state.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "ollama-streaming",
+    "title": "Add streaming to OllamaProvider",
+    "description": "Add stream_complete() to OllamaProvider in codecompass/providers/llm_ollama.py. Use httpx streaming: send POST to /v1/chat/completions with json field 'stream': True. Use httpx.stream() context manager, iterate response.iter_lines(), skip empty lines and '[DONE]' lines, parse each line as JSON and yield choices[0]['delta']['content'] when it is non-empty. Handle ConnectError the same way complete() does.",
+    "context_files": [
+      "codecompass/providers/llm_ollama.py",
+      "codecompass/providers/base.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "ask-json-output",
+    "title": "Add --output-format json flag to codecompass ask",
+    "description": "Add --output-format option (choices: text, json; default: text) to the ask command in codecompass/cli/main.py. When 'json', skip all Rich formatting and instead print a JSON object to stdout: {\"answer\": \"...\", \"citations\": [{\"path\": \"...\", \"start_line\": N, \"end_line\": N}]}. Streaming still works the same way internally; accumulate the full text then print JSON at the end.",
+    "context_files": [
+      "codecompass/cli/main.py",
+      "codecompass/generate/models.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "clear-command",
+    "title": "Add `codecompass clear` command",
+    "description": "Add a 'clear' CLI command in codecompass/cli/main.py. Usage: codecompass clear <repo-name>. Steps: (1) delete the ChromaDB collection named codecompass_<repo>, (2) call state_db.delete_paths() for all paths in that repo from ingest_hashes.db, (3) call graph_db methods to remove all nodes/edges for that repo. Add --all flag to wipe every repo. Prompt for confirmation with click.confirm() unless --yes is passed.",
+    "context_files": [
+      "codecompass/cli/main.py",
+      "codecompass/index/ingest_state.py",
+      "codecompass/graph/model.py",
+      "codecompass/providers/vector_store_chroma.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "retry-claude-provider",
+    "title": "Add retry logic to ClaudeCodeProvider",
+    "description": "Wrap the subprocess.run() call in ClaudeCodeProvider.complete() with tenacity retry. Retry up to 3 times with wait_exponential(multiplier=1, min=2, max=10) on RuntimeError, but NOT when the error message contains 'API key' or 'not found' (those are permanent failures). Import tenacity (already in pyproject.toml dependencies). Do the same for stream_complete() around the Popen call.",
+    "context_files": [
+      "codecompass/providers/llm_subprocess.py",
+      "pyproject.toml"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "language-breakdown",
+    "title": "Show per-language chunk count in ingest summary",
+    "description": "In _do_ingest in codecompass/cli/main.py, after all steps complete, compute a breakdown of chunks by language using collections.Counter on [c.language for c in chunks]. Add it to the final Panel message. Format: sorted by count descending, e.g. 'python: 1234  javascript: 567  go: 89'.",
+    "context_files": [
+      "codecompass/cli/main.py",
+      "codecompass/ingest/models.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "codecompassignore",
+    "title": "Support .codecompassignore file during ingest",
+    "description": "In codecompass/ingest/walker.py, load a .codecompassignore file from the repo root if it exists. Use the pathspec library (already a dependency) with pathspec.GitWildMatchPattern to parse it. During the file walk, skip any file whose path matches the patterns. Fall back gracefully if the file does not exist.",
+    "context_files": [
+      "codecompass/ingest/walker.py",
+      "codecompass/ingest/reader.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "openai-compat-streaming",
+    "title": "Add streaming to OpenAICompatProvider",
+    "description": "Add stream_complete() to OpenAICompatProvider in codecompass/providers/llm_openai_compat.py using httpx streaming. Mirror the same SSE parsing pattern used in OllamaProvider: POST /chat/completions with stream=True, iterate iter_lines(), parse JSON, yield choices[0]['delta']['content'] when non-empty, stop on [DONE]. Reuse the same headers dict (Authorization + Content-Type).",
+    "context_files": [
+      "codecompass/providers/llm_openai_compat.py",
+      "codecompass/providers/llm_ollama.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "list-repos-command",
+    "title": "Add `codecompass list` command",
+    "description": "Add a 'list' CLI command in codecompass/cli/main.py. It reads ingest_hashes.db via IngestStateDB to get all unique repos and their file counts. Queries graph.db via GraphDB.stats() for node/edge counts per repo. Displays a Rich Table with columns: Repo, Files indexed, Graph nodes, Graph edges. Handle the case where the data dir or DBs don't exist yet (print helpful message).",
+    "context_files": [
+      "codecompass/cli/main.py",
+      "codecompass/index/ingest_state.py",
+      "codecompass/graph/model.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "graph-export-dot",
+    "title": "Add `codecompass graph export` subcommand for DOT format",
+    "description": "Add an 'export' subcommand under the 'graph' group in codecompass/cli/main.py. Usage: codecompass graph export <repo> [--output graph.dot]. Query GraphDB for all nodes and edges for the given repo. Emit Graphviz DOT format: digraph { node1 -> node2 [label=\"imports\"]; ... }. Use node symbol_name or path as the label. Write to --output file or stdout if omitted.",
+    "context_files": [
+      "codecompass/cli/main.py",
+      "codecompass/graph/model.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "bm25-staleness-check",
+    "title": "Warn when BM25 index is stale",
+    "description": "In the ask command in codecompass/cli/main.py, after loading the BM25 index, compare its mtime to ingest_hashes.db mtime using Path.stat().st_mtime. If BM25 is older than the hash store (meaning ingest ran but BM25 wasn't updated), print a rich yellow warning: 'BM25 index may be stale — run codecompass ingest to refresh.' Only warn, don't block.",
+    "context_files": [
+      "codecompass/cli/main.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "hyde-retrieval",
+    "title": "Add HyDE option to hybrid search",
+    "description": "In codecompass/retrieve/hybrid.py, add an optional parameter hyde_llm (type LLMProvider | None = None). When provided, before embedding the query, call hyde_llm.complete() with the prompt: 'Write a short code snippet (10-20 lines) that would directly answer this question: {query}\\nCode:'. Embed the returned snippet instead of the raw query. This bridges the vocabulary gap between natural-language questions and code. Update Answerer.answer() and stream_answer() to pass self._llm as hyde_llm when config has a new retrieval.hyde boolean flag (default False).",
+    "context_files": [
+      "codecompass/retrieve/hybrid.py",
+      "codecompass/generate/answerer.py",
+      "codecompass/config/schema.py",
+      "codecompass/providers/base.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "eval-more-golden",
+    "title": "Add 10 more golden questions for the requests library eval set",
+    "description": "Add 10 more high-quality entries to codecompass/eval/golden/requests_golden.json. Each entry must match the existing schema: {\"question\": \"...\", \"relevant_paths\": [\"requests/...\"], \"reference_answer\": \"...\"}. Cover topics not already in the file: hooks system, HTTPAdapter and mount(), PreparedRequest, send() method, resolve_redirects(), stream=True parameter, cert verification, proxies dict, event hooks, and ConnectionError handling.",
+    "context_files": [
+      "codecompass/eval/golden/requests_golden.json"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "ingest-verbose",
+    "title": "Add --verbose flag to codecompass ingest",
+    "description": "Add --verbose/-v flag to the ingest command in codecompass/cli/main.py. When set, print each file path as it is chunked (one line per file: '  chunking: path/to/file.py (N chunks)'). This requires grouping chunks by path after ingest_repo() returns. Also log the total time taken for the embedding step in verbose mode.",
+    "context_files": [
+      "codecompass/cli/main.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  },
+  {
+    "id": "context-token-display",
+    "title": "Show context token usage in ask output",
+    "description": "After retrieval in the ask command (codecompass/cli/main.py), print a dim line showing how many tokens were packed vs the budget: e.g. '[dim]Context: 3241/6000 tokens from 8 chunks[/dim]'. Compute the token count by summing the embed_text() lengths of the packed results using the existing _count_tokens helper imported from answerer. Print this before the answer rule line.",
+    "context_files": [
+      "codecompass/cli/main.py",
+      "codecompass/generate/answerer.py",
+      "codecompass/retrieve/context_packer.py"
+    ],
+    "status": "pending",
+    "completed_at": null
+  }
+]

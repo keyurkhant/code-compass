@@ -1,0 +1,58 @@
+name: Daily Improvement
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 9 AM UTC every day
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+permissions:
+  contents: write # needed to push commits
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install anthropic
+
+      - name: Configure git identity
+        run: |
+          git config user.name "codecompass-bot"
+          git config user.email "codecompass-bot@users.noreply.github.com"
+
+      - name: Run daily improvement
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/daily_improve.py
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Last completed task" >> $GITHUB_STEP_SUMMARY
+          python -c "
+          import json
+          tasks = json.load(open('scripts/tasks.json'))
+          done = [t for t in tasks if t['status'] == 'completed']
+          pending = [t for t in tasks if t['status'] == 'pending']
+          print(f'- Completed: {len(done)}')
+          print(f'- Pending: {len(pending)}')
+          if done:
+              last = done[-1]
+              print(f'- Last: **{last[\"title\"]}** ({last.get(\"completed_at\",\"\")[:10]})')
+          " >> $GITHUB_STEP_SUMMARY
